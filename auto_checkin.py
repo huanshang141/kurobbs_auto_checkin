@@ -27,8 +27,9 @@ class KurobbsClient:
     SIGN_URL = "https://api.kurobbs.com/encourage/signIn/v2"
     USER_SIGN_URL = "https://api.kurobbs.com/user/signIn"
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, account_name: str = "默认账号"):  # 修改这里，添加默认值
         self.token = token
+        self.account_name = account_name
         self.result: Dict[str, str] = {}
         self.exceptions: List[Exception] = []
 
@@ -146,22 +147,22 @@ def main():
     configure_logger(debug=debug)
 
     # 获取所有账号的token
-    accounts = {
-        "账号1": os.getenv("TOKEN"),
-        "账号2": os.getenv("TOKEN2")
-    }
+    accounts = [
+        ("账号1", os.getenv("TOKEN")),
+        ("账号2", os.getenv("TOKEN2"))
+    ]
 
     all_results = []
     has_error = False
 
     # 遍历所有账号进行签到
-    for account_name, token in accounts.items():
+    for account_name, token in accounts:
         if not token:
             logger.warning(f"{account_name} 的token未设置，跳过")
             continue
 
         try:
-            kurobbs = KurobbsClient(token, account_name)
+            kurobbs = KurobbsClient(token=token, account_name=account_name)  # 使用关键字参数
             kurobbs.start()
             if kurobbs.msg:
                 all_results.append(kurobbs.msg)
