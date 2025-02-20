@@ -148,7 +148,7 @@ def main():
     # 获取所有账号的token
     accounts = {
         "账号1": os.getenv("TOKEN"),
-        "账号2": os.getenv("TOKEN1")
+        "账号2": os.getenv("TOKEN2")
     }
 
     all_results = []
