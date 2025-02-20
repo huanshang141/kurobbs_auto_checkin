@@ -36,14 +36,14 @@ class KurobbsClient:
         """Get the headers required for API requests."""
         return {
             "osversion": "Android",
-            "devcode": "2fba3859fe9bfe9099f2696b8648c2c6",
+            "devcode": "39BAFA5213054623682C1EE76533416163075BFC",
             "countrycode": "CN",
-            "ip": "10.0.2.233",
-            "model": "2211133C",
+            "ip": "192.168.199.159",
+            "model": "SM-G9730",
             "source": "android",
             "lang": "zh-Hans",
-            "version": "1.0.9",
-            "versioncode": "1090",
+            "version": "2.3.2",
+            "versioncode": "2320",
             "token": self.token,
             "content-type": "application/x-www-form-urlencoded; charset=utf-8",
             "accept-encoding": "gzip",
@@ -142,21 +142,46 @@ def configure_logger(debug: bool = False):
 
 def main():
     """Main function to handle command-line arguments and start the sign-in process."""
-    token = os.getenv("TOKEN")
     debug = os.getenv("DEBUG", False)
     configure_logger(debug=debug)
 
-    try:
-        kurobbs = KurobbsClient(token)
-        kurobbs.start()
-        if kurobbs.msg:
-            send_bark_notification(kurobbs.msg)
-    except KurobbsClientException as e:
-        logger.error(str(e), exc_info=False)
-        send_bark_notification("签到任务失败!")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    # 获取所有账号的token
+    accounts = {
+        "账号1": os.getenv("TOKEN"),
+        "账号2": os.getenv("TOKEN1")
+    }
+
+    all_results = []
+    has_error = False
+
+    # 遍历所有账号进行签到
+    for account_name, token in accounts.items():
+        if not token:
+            logger.warning(f"{account_name} 的token未设置，跳过")
+            continue
+
+        try:
+            kurobbs = KurobbsClient(token, account_name)
+            kurobbs.start()
+            if kurobbs.msg:
+                all_results.append(kurobbs.msg)
+        except KurobbsClientException as e:
+            error_msg = f"{account_name} 签到失败: {str(e)}"
+            logger.error(error_msg, exc_info=False)
+            all_results.append(error_msg)
+            has_error = True
+        except Exception as e:
+            error_msg = f"{account_name} 发生未知错误: {str(e)}"
+            logger.error(error_msg)
+            all_results.append(error_msg)
+            has_error = True
+
+    # 发送通知
+    if all_results:
+        notification_message = "\n".join(all_results)
+        send_bark_notification(notification_message)
+
+    if has_error:
         sys.exit(1)
 
 
