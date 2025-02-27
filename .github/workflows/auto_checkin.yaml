@@ -34,7 +34,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.TOKEN }}
           TOKEN2: ${{ secrets.TOKEN2 }}
-          BARK_DEVICE_KEY: ${{ secrets.BARK_DEVICE_KEY }}
-          BARK_SERVER_URL: ${{ secrets.BARK_SERVER_URL }}
+          WECHAT_WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
         run: |
           python auto_checkin.py
+
