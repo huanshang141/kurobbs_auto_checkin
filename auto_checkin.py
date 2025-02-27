@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 
 from ext_bark import send_bark_notification
 
+from ext_wechat import send_wechat_notification
+
 
 class Response(BaseModel):
     code: int = Field(..., alias="code", description="返回值")
@@ -18,7 +20,7 @@ class Response(BaseModel):
 
 
 class KurobbsClientException(Exception):
-    """Custom exception for Kurobbs client errors."""
+    """库街区客户端异常。"""
     pass
 
 
@@ -27,14 +29,14 @@ class KurobbsClient:
     SIGN_URL = "https://api.kurobbs.com/encourage/signIn/v2"
     USER_SIGN_URL = "https://api.kurobbs.com/user/signIn"
 
-    def __init__(self, token: str, account_name: str = "默认账号"):  # 修改这里，添加默认值
+    def __init__(self, token: str, account_name: str = "默认账号"):
         self.token = token
         self.account_name = account_name
         self.result: Dict[str, str] = {}
         self.exceptions: List[Exception] = []
 
     def get_headers(self) -> Dict[str, str]:
-        """Get the headers required for API requests."""
+        """获取API请求所需的请求头。"""
         return {
             "osversion": "Android",
             "devcode": "39BAFA5213054623682C1EE76533416163075BFC",
@@ -52,7 +54,7 @@ class KurobbsClient:
         }
 
     def make_request(self, url: str, data: Dict[str, Any]) -> Response:
-        """Make a POST request to the specified URL with the given data."""
+        """发送POST请求到指定URL。"""
         headers = self.get_headers()
         response = requests.post(url, headers=headers, data=data)
         res = Response.model_validate_json(response.content)
@@ -60,13 +62,13 @@ class KurobbsClient:
         return res
 
     def get_user_game_list(self, game_id: int) -> List[Dict[str, Any]]:
-        """Get the list of games for the user."""
+        """获取用户游戏列表。"""
         data = {"gameId": game_id}
         res = self.make_request(self.FIND_ROLE_LIST_API_URL, data)
         return res.data
 
     def checkin(self) -> Response:
-        """Perform the check-in operation."""
+        """执行签到操作。"""
         user_game_list = self.get_user_game_list(3)
 
         date = datetime.now().month
@@ -80,7 +82,7 @@ class KurobbsClient:
         return self.make_request(self.SIGN_URL, data)
 
     def sign_in(self) -> Response:
-        """Perform the sign-in operation."""
+        """执行社区签到操作。"""
         return self.make_request(self.USER_SIGN_URL, {"gameId": 2})
 
     def _process_sign_action(
@@ -91,12 +93,12 @@ class KurobbsClient:
         failure_message: str,
     ):
         """
-        Handle the common logic for sign-in actions.
+        处理签到操作的通用逻辑。
 
-        :param action_name: The name of the action (used to store the result).
-        :param action_method: The method to call for the sign-in action.
-        :param success_message: The message to log on success.
-        :param failure_message: The message to log on failure.
+        :param action_name: 操作名称（用于存储结果）
+        :param action_method: 签到操作的方法
+        :param success_message: 成功时的消息
+        :param failure_message: 失败时的消息
         """
         resp = action_method()
         if resp.success:
@@ -105,7 +107,7 @@ class KurobbsClient:
             self.exceptions.append(KurobbsClientException(failure_message))
 
     def start(self):
-        """Start the sign-in process."""
+        """开始签到流程。"""
         self._process_sign_action(
             action_name="checkin",
             action_method=self.checkin,
@@ -127,7 +129,7 @@ class KurobbsClient:
         return ", ".join(self.result.values()) + "!"
 
     def _log(self):
-        """Log the results and raise exceptions if any."""
+        """记录结果并抛出异常（如果有）。"""
         if msg := self.msg:
             logger.info(msg)
         if self.exceptions:
@@ -135,14 +137,14 @@ class KurobbsClient:
 
 
 def configure_logger(debug: bool = False):
-    """Configure the logger based on the debug mode."""
-    logger.remove()  # Remove default logger configuration
+    """根据调试模式配置日志记录器。"""
+    logger.remove()  # 移除默认的日志配置
     log_level = "DEBUG" if debug else "INFO"
     logger.add(sys.stdout, level=log_level)
 
 
 def main():
-    """Main function to handle command-line arguments and start the sign-in process."""
+    """主函数，处理命令行参数并启动签到流程。"""
     debug = os.getenv("DEBUG", False)
     configure_logger(debug=debug)
 
@@ -158,21 +160,21 @@ def main():
     # 遍历所有账号进行签到
     for account_name, token in accounts:
         if not token:
-            logger.warning(f"{account_name} 的token未设置，跳过")
+            logger.warning(f"{account_name}的token未设置，跳过")
             continue
 
         try:
-            kurobbs = KurobbsClient(token=token, account_name=account_name)  # 使用关键字参数
+            kurobbs = KurobbsClient(token=token, account_name=account_name)
             kurobbs.start()
             if kurobbs.msg:
                 all_results.append(kurobbs.msg)
         except KurobbsClientException as e:
-            error_msg = f"{account_name} 签到失败: {str(e)}"
+            error_msg = f"{account_name}签到失败：{str(e)}"
             logger.error(error_msg, exc_info=False)
             all_results.append(error_msg)
             has_error = True
         except Exception as e:
-            error_msg = f"{account_name} 发生未知错误: {str(e)}"
+            error_msg = f"{account_name}发生未知错误：{str(e)}"
             logger.error(error_msg)
             all_results.append(error_msg)
             has_error = True
@@ -180,7 +182,7 @@ def main():
     # 发送通知
     if all_results:
         notification_message = "\n".join(all_results)
-        send_bark_notification(notification_message)
+        send_wechat_notification(notification_message)
 
     if has_error:
         sys.exit(1)
