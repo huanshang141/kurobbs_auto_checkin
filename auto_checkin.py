@@ -102,9 +102,11 @@ class KurobbsClient:
         """
         resp = action_method()
         if resp.success:
-            self.result[action_name] = success_message
+            # 将API返回的msg添加到结果消息中
+            self.result[action_name] = f"{success_message}（{resp.msg}）"
         else:
-            self.exceptions.append(KurobbsClientException(failure_message))
+            # 将API返回的msg添加到错误消息中
+            self.exceptions.append(KurobbsClientException(f"{failure_message}（{resp.msg}）"))
 
     def start(self):
         """开始签到流程。"""
