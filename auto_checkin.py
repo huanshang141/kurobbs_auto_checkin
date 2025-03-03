@@ -4,12 +4,17 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
+
+import random
+import time
+
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from ext_bark import send_bark_notification
 
 from ext_wechat import send_wechat_notification
+
 
 
 class Response(BaseModel):
@@ -28,6 +33,12 @@ class KurobbsClient:
     FIND_ROLE_LIST_API_URL = "https://api.kurobbs.com/user/role/findRoleList"
     SIGN_URL = "https://api.kurobbs.com/encourage/signIn/v2"
     USER_SIGN_URL = "https://api.kurobbs.com/user/signIn"
+    FORUM_LIST_URL = "https://api.kurobbs.com/forum/list"
+
+    SHARE_TASK_URL = "https://api.kurobbs.com/encourage/level/shareTask"
+    LIKE_URL = "https://api.kurobbs.com/forum/like"
+    POST_DETAIL_URL = "https://api.kurobbs.com/forum/getPostDetail"
+    TASK_PROCESS_URL = "https://api.kurobbs.com/encourage/level/getTaskProcess"
 
     def __init__(self, token: str, account_name: str = "默认账号"):
         self.token = token
@@ -85,6 +96,52 @@ class KurobbsClient:
         """执行社区签到操作。"""
         return self.make_request(self.USER_SIGN_URL, {"gameId": 2})
 
+    def get_post_list(self) -> List[Dict[str, Any]]:
+        """获取帖子列表。"""
+        data = {
+            "forumId": 10,
+            "gameId": 3,
+            "pageIndex": 1,
+            "pageSize": 20,
+            "searchType": 1,
+            "timeType": 0
+        }
+        res = self.make_request(self.FORUM_LIST_URL, data)
+        return res.data.get("postList", [])
+
+    def share_task(self) -> Response:
+        """执行分享任务。"""
+        return self.make_request(self.SHARE_TASK_URL, {"gameId": 3})
+
+    def like_post(self, post: Dict[str, Any], like_type: int = 1) -> Response:
+        """点赞或取消点赞帖子。"""
+        data = {
+            "forumId": post.get("gameForumId"),
+            "gameId": 3,
+            "likeType": 1,
+            "operateType": like_type,  # 1为点赞，2为取消点赞
+            "postCommentId": 0,
+            "postCommentReplyId": 0,
+            "postId": post.get("postId"),
+            "postType": post.get("postType"),
+            "toUserId": post.get("userId")
+        }
+        return self.make_request(self.LIKE_URL, data)
+
+    def view_post(self, post: Dict[str, Any]) -> Response:
+        """浏览帖子。"""
+        data = {
+            "isOnlyPublisher": 0,
+            "postId": post.get("postId"),
+            "showOrderType": 2
+        }
+        return self.make_request(self.POST_DETAIL_URL, data)
+
+    def get_task_process(self) -> Response:
+        """获取任务进度。"""
+        user_id = json.loads(base64.b64decode(self.token.split(".")[1]).decode("utf-8")).get("userId")
+        return self.make_request(self.TASK_PROCESS_URL, {"gameId": 0, "userId": user_id})
+
     def _process_sign_action(
         self,
         action_name: str,
@@ -93,12 +150,12 @@ class KurobbsClient:
         failure_message: str,
     ):
         """
-        处理签到操作的通用逻辑。
+        处理日常任务操作的通用逻辑。
 
         :param action_name: 操作名称（用于存储结果）
-        :param action_method: 签到操作的方法
-        :param success_message: 成功时的消息
-        :param failure_message: 失败时的消息
+        :param action_method: 操作的方法
+        :param success_message: 执行任务成功时的消息
+        :param failure_message: 执行任务失败时的消息
         """
         resp = action_method()
         if resp.success:
@@ -109,7 +166,7 @@ class KurobbsClient:
             self.exceptions.append(KurobbsClientException(f"{failure_message}（{resp.msg}）"))
 
     def start(self):
-        """开始签到流程。"""
+        # 执行奖励签到
         self._process_sign_action(
             action_name="checkin",
             action_method=self.checkin,
@@ -117,12 +174,63 @@ class KurobbsClient:
             failure_message="签到奖励签到失败",
         )
 
+        # 执行社区签到
         self._process_sign_action(
             action_name="sign_in",
             action_method=self.sign_in,
             success_message="社区签到成功",
             failure_message="社区签到失败",
         )
+        # 添加3秒延迟
+        time.sleep(3)
+
+        # 执行分享任务
+        self._process_sign_action(
+            action_name="share",
+            action_method=self.share_task,
+            success_message="分享任务完成",
+            failure_message="分享任务失败",
+        )
+        # 添加3秒延迟
+        time.sleep(3)
+        
+        # 获取帖子列表
+        posts = self.get_post_list()
+        if posts:
+            # 随机选择5篇不同的帖子进行点赞
+            like_posts = random.sample(posts, min(5, len(posts)))
+            for post in like_posts:
+                # 点赞帖子
+                self._process_sign_action(
+                    action_name=f"like_{post['postId']}",
+                    action_method=lambda: self.like_post(post, like_type=1),
+                    success_message=f"点赞帖子{post['postId']}完成",
+                    failure_message=f"点赞帖子{post['postId']}失败",
+                )
+                # 添加3秒延迟
+                time.sleep(3)
+
+                # 取消点赞
+                self._process_sign_action(
+                    action_name=f"unlike_{post['postId']}",
+                    action_method=lambda: self.like_post(post, like_type=2),
+                    success_message=f"取消点赞帖子{post['postId']}完成",
+                    failure_message=f"取消点赞帖子{post['postId']}失败",
+                )
+                # 添加3秒延迟
+                time.sleep(3)
+
+            # 随机选择3篇不同的帖子进行浏览
+            view_posts = random.sample(posts, min(3, len(posts)))
+            for post in view_posts:
+                self._process_sign_action(
+                    action_name=f"view_{post['postId']}",
+                    action_method=lambda: self.view_post(post),
+                    success_message=f"浏览帖子{post['postId']}完成",
+                    failure_message=f"浏览帖子{post['postId']}失败",
+                )
+                # 添加3秒延迟
+                time.sleep(3)
 
         self._log()
 
