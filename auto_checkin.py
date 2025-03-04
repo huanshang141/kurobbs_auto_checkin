@@ -1,20 +1,14 @@
 import os
 import sys
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
-
 import requests
-
 import random
 import time
 
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
-
-from ext_bark import send_bark_notification
-
 from ext_wechat import send_wechat_notification
-
 
 
 class Response(BaseModel):
