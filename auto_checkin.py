@@ -152,12 +152,12 @@ class KurobbsClient:
         :param failure_message: 执行任务失败时的消息
         """
         resp = action_method()
-        if resp.success:
-            # 将API返回的msg添加到结果消息中
-            self.result[action_name] = f"{success_message}（{resp.msg}）"
-        else:
-            # 将API返回的msg添加到错误消息中
-            self.exceptions.append(KurobbsClientException(f"{failure_message}（{resp.msg}）"))
+        # if resp.success:
+        #     # 将API返回的msg添加到结果消息中
+        #     self.result[action_name] = f"{success_message}（{resp.msg}）"
+        # else:
+        # 将API返回的msg添加到错误消息中
+        self.exceptions.append(KurobbsClientException(f"{failure_message}（{resp.msg}）"))
 
     def start(self):
         # 执行奖励签到
