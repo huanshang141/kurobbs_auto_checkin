@@ -172,8 +172,8 @@ class KurobbsClient:
         self._process_sign_action(
             action_name="sign_in",
             action_method=self.sign_in,
-            # success_message="社区签到成功",
-            # failure_message="社区签到失败",
+            success_message="社区签到成功",
+            failure_message="社区签到失败",
         )
         # 添加3秒延迟
         time.sleep(3)
@@ -182,8 +182,8 @@ class KurobbsClient:
         self._process_sign_action(
             action_name="share",
             action_method=self.share_task,
-            # success_message="分享任务完成",
-            # failure_message="分享任务失败",
+            success_message="分享任务完成",
+            failure_message="分享任务失败",
         )
         # 添加3秒延迟
         time.sleep(3)
@@ -198,8 +198,8 @@ class KurobbsClient:
                 self._process_sign_action(
                     action_name=f"like_{post['postId']}",
                     action_method=lambda: self.like_post(post, like_type=1),
-                    # success_message=f"点赞帖子{post['postId']}完成",
-                    # failure_message=f"点赞帖子{post['postId']}失败",
+                    success_message=f"点赞帖子{post['postId']}完成",
+                    failure_message=f"点赞帖子{post['postId']}失败",
                 )
                 # 添加3秒延迟
                 time.sleep(3)
@@ -208,8 +208,8 @@ class KurobbsClient:
                 self._process_sign_action(
                     action_name=f"unlike_{post['postId']}",
                     action_method=lambda: self.like_post(post, like_type=2),
-                    # success_message=f"取消点赞帖子{post['postId']}完成",
-                    # failure_message=f"取消点赞帖子{post['postId']}失败",
+                    success_message=f"取消点赞帖子{post['postId']}完成",
+                    failure_message=f"取消点赞帖子{post['postId']}失败",
                 )
                 # 添加3秒延迟
                 time.sleep(3)
@@ -220,8 +220,8 @@ class KurobbsClient:
                 self._process_sign_action(
                     action_name=f"view_{post['postId']}",
                     action_method=lambda: self.view_post(post),
-                    # success_message=f"浏览帖子{post['postId']}完成",
-                    # failure_message=f"浏览帖子{post['postId']}失败",
+                    success_message=f"浏览帖子{post['postId']}完成",
+                    failure_message=f"浏览帖子{post['postId']}失败",
                 )
                 # 添加3秒延迟
                 time.sleep(3)
